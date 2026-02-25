@@ -19,6 +19,9 @@ import java.util.Objects;
 import javax.swing.JOptionPane;
 import javax.swing.JTable;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.text.AttributeSet;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.DocumentFilter;
 import modelos.AccesoBD;
 import modelos.MdlContacto;
 import modelos.MdlContactosBD;
@@ -52,7 +55,11 @@ public class CtrlAgenda extends MouseAdapter implements ActionListener, KeyListe
         limpiarControles();
     }    
 
-    private boolean datosValidos(int i){        
+    private boolean telefonoValido(String telefono) {
+        return telefono.matches("\\+57 \\d{3} \\d{3} \\d{4}");
+    }
+
+    private boolean datosValidos(int i){
         if(i == 1){
             if(this.frm.txtNroDeIdentificacion.getText().trim().length() == 0){
                 JOptionPane.showMessageDialog(frm, "El campo nro de identificacion no puede estar vacio");
@@ -60,45 +67,49 @@ public class CtrlAgenda extends MouseAdapter implements ActionListener, KeyListe
                 return false;
             }
         }
-        
+
         if(i == 0){
             if(this.frm.txtNroDeIdentificacion.getText().trim().length() == 0){
                 JOptionPane.showMessageDialog(frm, "El campo nro de identificacion no puede estar vacio");
                 this.frm.txtNroDeIdentificacion.grabFocus();
                 return false;
             }
-            if(this.frm.txtContacto.getText().trim().length() == 0){
-                JOptionPane.showMessageDialog(frm, "El campo de contacto no puede estar vacio");
+            if(!telefonoValido(this.frm.txtContacto.getText())){
+                JOptionPane.showMessageDialog(frm, "El contacto debe tener formato +57 XXX XXX XXXX (10 digitos)");
                 this.frm.txtContacto.grabFocus();
                 return false;
             }
         }
-        
+
         return true;
     }
     
     private boolean validarContacto(int numCampos){
         boolean esValido = false;
-        
+
         List<MdlContacto> contactos = mdlContactoBD.consultarUsuarios();
-        
+
         if (numCampos == 1) {
             for (MdlContacto contacto : contactos) {
                 if (contacto.getNroDeIdentificacion() == Long.parseLong(this.frm.txtNroDeIdentificacion.getText())) {
-                    esValido = false;
-                }
-            }
-        }
-        
-        if (numCampos == 2) {
-            for (MdlContacto contacto : contactos) {
-                if (contacto.getDatoContacto().equals(this.frm.txtContacto.getText().toUpperCase())) {    
-                    System.out.println(contacto.getDatoContacto() + " : " + this.frm.txtContacto.getText());
                     esValido = true;
+                    break;
                 }
             }
         }
-        
+
+        if (numCampos == 2) {
+            Long currentId = this.frm.txtAgendaId.getText().trim().isEmpty() ? -1L :
+                             Long.parseLong(this.frm.txtAgendaId.getText().trim());
+            for (MdlContacto contacto : contactos) {
+                if (contacto.getDatoContacto().equals(this.frm.txtContacto.getText().toUpperCase())
+                        && !contacto.getId().equals(currentId)) {
+                    esValido = true;
+                    break;
+                }
+            }
+        }
+
         return esValido;
     }
     
@@ -157,7 +168,7 @@ public class CtrlAgenda extends MouseAdapter implements ActionListener, KeyListe
             if (per != null) {
                 this.frm.txtAgendaId.setText(per.getId().toString());
                 this.frm.txtNroDeIdentificacion.setText((per.getNroDeIdentificacion().toString()));
-                this.frm.txtContacto.setText(per.getDatoContacto());
+                setContacto(per.getDatoContacto());
 
                 mostrarUsuarioEnLaTabla(per);
             } else {
@@ -172,32 +183,30 @@ public class CtrlAgenda extends MouseAdapter implements ActionListener, KeyListe
     private void actualizarContacto() {
         mdlContactoBD = new MdlContactosBD();
         if (this.frm.txtAgendaId.getText().trim().length() != 0) {
-            
-            if (!validarContacto(2)) { // Si no existe este dato de contacto ya registrado
-                
-                if (this.frm.txtContacto.getText().trim().length() != 0) {
-                    mdlContactoBD.setDatoContacto(this.frm.txtContacto.getText());
 
-                    if (mdlContactoBD.actualizar(Long.parseLong(this.frm.txtAgendaId.getText()))) {
-                        JOptionPane.showMessageDialog(frm, "Usuario actualizado correctamente");
-                        limpiarControles();
-                    } else {
-                        JOptionPane.showMessageDialog(frm, "Primero consulta un usuario antes de actualizarlo");
-                    }
+            if (!telefonoValido(this.frm.txtContacto.getText())) {
+                JOptionPane.showMessageDialog(frm, "El contacto debe tener formato +57 XXX XXX XXXX (10 digitos)");
+                this.frm.txtContacto.grabFocus();
+                return;
+            }
+
+            if (!validarContacto(2)) { // Si no existe este dato de contacto ya registrado
+                mdlContactoBD.setDatoContacto(this.frm.txtContacto.getText());
+
+                if (mdlContactoBD.actualizar(Long.parseLong(this.frm.txtAgendaId.getText()))) {
+                    JOptionPane.showMessageDialog(frm, "Usuario actualizado correctamente");
+                    limpiarControles();
                 } else {
-                    JOptionPane.showMessageDialog(frm, "El campo contacto no puede estar vacio");
-                    this.frm.txtContacto.grabFocus();
+                    JOptionPane.showMessageDialog(frm, "Primero consulta un usuario antes de actualizarlo");
                 }
-                
-            }else{
+            } else {
                 JOptionPane.showMessageDialog(frm, "Contacto ya existentes");
             }
-           
+
         } else {
             JOptionPane.showMessageDialog(frm, "Primero busca el usuario antes de actualizarlo");
             limpiarControles();
         }
-
     }   
     
     
@@ -205,19 +214,27 @@ public class CtrlAgenda extends MouseAdapter implements ActionListener, KeyListe
         butRegistrar, butConsultar, butLimpiar, butActualizar
     }
     
+    private void setContacto(String value) {
+        javax.swing.text.AbstractDocument doc =
+                (javax.swing.text.AbstractDocument) this.frm.txtContacto.getDocument();
+        doc.setDocumentFilter(null);
+        this.frm.txtContacto.setText(value);
+        doc.setDocumentFilter(new FiltroTelefono());
+    }
+
     private void limpiarControles(){
         this.frm.txtAgendaId.setText("");
         this.frm.txtNroDeIdentificacion.setText("");
-        this.frm.txtContacto.setText("");
-        
+        setContacto("+57 ");
+
         this.mdlContactoBD = new MdlContactosBD();
         this.mdlContactoBD.llenarTabla(this.frm.tblContactos);
     }
-    
+
     private void rellenarCamposConTabla(int fila){
         this.frm.txtAgendaId.setText(this.frm.tblContactos.getValueAt(fila, 0).toString().toUpperCase());
         this.frm.txtNroDeIdentificacion.setText(this.frm.tblContactos.getValueAt(fila, 1).toString().toUpperCase());
-        this.frm.txtContacto.setText(this.frm.tblContactos.getValueAt(fila, 4).toString());
+        setContacto(this.frm.tblContactos.getValueAt(fila, 4).toString());
     }
     
     private void mostrarUsuarioEnLaTabla(MdlContacto per){
@@ -262,31 +279,33 @@ public class CtrlAgenda extends MouseAdapter implements ActionListener, KeyListe
     public void iniciar(){
         this.frm.btnRegistrar.setActionCommand("butRegistrar");
         this.frm.btnRegistrar.addActionListener(this);
-        
+
         this.frm.btnConsultar.setActionCommand("butConsultar");
         this.frm.btnConsultar.addActionListener(this);
-        
+
         this.frm.btnLimpiar.setActionCommand("butLimpiar");
         this.frm.btnLimpiar.addActionListener(this);
-        
+
         this.frm.btnActualizar.setActionCommand("butActualizar");
         this.frm.btnActualizar.addActionListener(this);
-        
+
         this.frm.btnReporte.setActionCommand("butReporte");
         this.frm.btnReporte.addActionListener(this);
-        
+
         this.frm.txtNroDeIdentificacion.addKeyListener(this);
-        
+
         this.frm.tblContactos.addMouseListener(this);
+
+        ((javax.swing.text.AbstractDocument) this.frm.txtContacto.getDocument())
+                .setDocumentFilter(new FiltroTelefono());
     }
     
     @Override
     public void keyTyped(KeyEvent arg0) {
         if (arg0.getSource() == this.frm.txtNroDeIdentificacion) {
-            if (Character.isLetter(arg0.getKeyChar())) {
+            if (!Character.isDigit(arg0.getKeyChar())) {
                 arg0.consume();
             }
-            
         }
     }
 
@@ -313,7 +332,7 @@ public class CtrlAgenda extends MouseAdapter implements ActionListener, KeyListe
                 break;
             case "butConsultar":
                 consultarContacto();
-                break;      
+                break;
             case "butLimpiar":
                 limpiarControles();
                 break;
@@ -323,6 +342,50 @@ public class CtrlAgenda extends MouseAdapter implements ActionListener, KeyListe
             case "butReporte":
                 crearReporte();
                 break;
+        }
+    }
+
+    private static class FiltroTelefono extends DocumentFilter {
+        private static final String PREFIX = "+57 ";
+        private static final int MAX_DIGITS = 10;
+
+        private String soloDigitos(String s) { return s.replaceAll("\\D", ""); }
+
+        private String formatear(String d) {
+            if (d.length() <= 3) return d;
+            if (d.length() <= 6) return d.substring(0,3) + " " + d.substring(3);
+            return d.substring(0,3) + " " + d.substring(3,6) + " " + d.substring(6);
+        }
+
+        private void aplicar(FilterBypass fb, String digits) throws BadLocationException {
+            if (digits.length() > MAX_DIGITS) digits = digits.substring(0, MAX_DIGITS);
+            fb.replace(0, fb.getDocument().getLength(), PREFIX + formatear(digits), null);
+        }
+
+        @Override
+        public void insertString(FilterBypass fb, int off, String text, AttributeSet a)
+                throws BadLocationException {
+            String current = fb.getDocument().getText(0, fb.getDocument().getLength());
+            String digits = soloDigitos(current.substring(PREFIX.length()) + text);
+            aplicar(fb, digits);
+        }
+
+        @Override
+        public void replace(FilterBypass fb, int off, int len, String text, AttributeSet a)
+                throws BadLocationException {
+            String current = fb.getDocument().getText(0, fb.getDocument().getLength());
+            int safeOff = Math.max(PREFIX.length(), Math.min(off, current.length()));
+            int safeEnd = Math.min(off + len, current.length());
+            String before = current.substring(PREFIX.length(), safeOff);
+            String after  = safeEnd < current.length() ? current.substring(Math.max(safeEnd, PREFIX.length())) : "";
+            String digits = soloDigitos(before + (text != null ? text : "") + after);
+            aplicar(fb, digits);
+        }
+
+        @Override
+        public void remove(FilterBypass fb, int off, int len) throws BadLocationException {
+            if (off < PREFIX.length()) return;
+            replace(fb, off, len, "", null);
         }
     }
 }

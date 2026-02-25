@@ -50,7 +50,13 @@ public class CtrlUsuario extends MouseAdapter implements ActionListener, KeyList
                 this.frm.txtNroDeIdentificacion.grabFocus();
                 return false;
             }
-            
+
+            if(this.frm.txtNroDeIdentificacion.getText().trim().length() < 6){
+                JOptionPane.showMessageDialog(frm, "El nro de identificacion debe tener al menos 6 digitos");
+                this.frm.txtNroDeIdentificacion.grabFocus();
+                return false;
+            }
+
             if(this.frm.txtNombre.getText().trim().length() == 0){
                 JOptionPane.showMessageDialog(frm, "El campo Nombre no puede estar vacio");
                 this.frm.txtNombre.grabFocus();
