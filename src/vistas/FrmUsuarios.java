@@ -1,5 +1,12 @@
 package vistas;
 
+import java.awt.event.ActionEvent;
+import java.awt.event.InputEvent;
+import java.awt.event.KeyEvent;
+import javax.swing.AbstractAction;
+import javax.swing.JComponent;
+import javax.swing.KeyStroke;
+
 public class FrmUsuarios extends javax.swing.JInternalFrame {
 
     private static FrmUsuarios instancia = null;
@@ -13,6 +20,42 @@ public class FrmUsuarios extends javax.swing.JInternalFrame {
             public void internalFrameClosing(javax.swing.event.InternalFrameEvent e) {
                 instancia = null;
             }
+        });
+
+        // Tooltips
+        butRegistrar.setToolTipText("Registrar usuario (Ctrl+Enter)");
+        btnConsultar.setToolTipText("Buscar usuario (Ctrl+F)");
+        btnActualizar.setToolTipText("Actualizar usuario (Ctrl+S)");
+        btnLimpiar.setToolTipText("Limpiar campos (Escape)");
+        jButton3.setToolTipText("Cerrar (Ctrl+W)");
+
+        // Atajos de teclado
+        javax.swing.InputMap im = getRootPane().getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
+        javax.swing.ActionMap am = getRootPane().getActionMap();
+
+        im.put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, InputEvent.CTRL_DOWN_MASK), "registrar");
+        am.put("registrar", new AbstractAction() {
+            @Override public void actionPerformed(ActionEvent e) { butRegistrar.doClick(); }
+        });
+
+        im.put(KeyStroke.getKeyStroke(KeyEvent.VK_F, InputEvent.CTRL_DOWN_MASK), "consultar");
+        am.put("consultar", new AbstractAction() {
+            @Override public void actionPerformed(ActionEvent e) { btnConsultar.doClick(); }
+        });
+
+        im.put(KeyStroke.getKeyStroke(KeyEvent.VK_S, InputEvent.CTRL_DOWN_MASK), "actualizar");
+        am.put("actualizar", new AbstractAction() {
+            @Override public void actionPerformed(ActionEvent e) { btnActualizar.doClick(); }
+        });
+
+        im.put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "limpiar");
+        am.put("limpiar", new AbstractAction() {
+            @Override public void actionPerformed(ActionEvent e) { btnLimpiar.doClick(); }
+        });
+
+        im.put(KeyStroke.getKeyStroke(KeyEvent.VK_W, InputEvent.CTRL_DOWN_MASK), "cerrar");
+        am.put("cerrar", new AbstractAction() {
+            @Override public void actionPerformed(ActionEvent e) { jButton3.doClick(); }
         });
     }
 
