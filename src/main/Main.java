@@ -6,9 +6,10 @@ import modelos.AccesoBD;
 import vistas.FrmPrincipal;
 
 public class Main {
-    static void main() {
-        Connection conx = AccesoBD.getInstancia().getConexion("agenda_contactos_lengpro2", "127.0.0.1", "3306", "root", "");
-        
+    public static void main(String[] args) {
+        Connection conx = AccesoBD.getInstancia().getConexion("agenda_contactos_lengpro2", "127.0.0.1", "3306", "root",
+                "");
+
         FrmPrincipal ventanaPrincipal = new FrmPrincipal();
         ventanaPrincipal.setVisible(true);
         ventanaPrincipal.setLocationRelativeTo(null);
